@@ -7,11 +7,18 @@ import { msgTypes } from './registry';
 import { IgniteClient } from "../client"
 import { MissingWalletError } from "../helpers"
 import { Api } from "./rest";
+import { MsgRejectGame } from "./types/checkers/tx";
 import { MsgCreateGame } from "./types/checkers/tx";
 import { MsgPlayMove } from "./types/checkers/tx";
 
 
-export { MsgCreateGame, MsgPlayMove };
+export { MsgRejectGame, MsgCreateGame, MsgPlayMove };
+
+type sendMsgRejectGameParams = {
+  value: MsgRejectGame,
+  fee?: StdFee,
+  memo?: string
+};
 
 type sendMsgCreateGameParams = {
   value: MsgCreateGame,
@@ -25,6 +32,10 @@ type sendMsgPlayMoveParams = {
   memo?: string
 };
 
+
+type msgRejectGameParams = {
+  value: MsgRejectGame,
+};
 
 type msgCreateGameParams = {
   value: MsgCreateGame,
@@ -51,6 +62,20 @@ interface TxClientOptions {
 export const txClient = ({ signer, prefix, addr }: TxClientOptions = { addr: "http://localhost:26657", prefix: "cosmos" }) => {
 
   return {
+		
+		async sendMsgRejectGame({ value, fee, memo }: sendMsgRejectGameParams): Promise<DeliverTxResponse> {
+			if (!signer) {
+					throw new Error('TxClient:sendMsgRejectGame: Unable to sign Tx. Signer is not present.')
+			}
+			try {			
+				const { address } = (await signer.getAccounts())[0]; 
+				const signingClient = await SigningStargateClient.connectWithSigner(addr,signer,{registry, prefix});
+				let msg = this.msgRejectGame({ value: MsgRejectGame.fromPartial(value) })
+				return await signingClient.signAndBroadcast(address, [msg], fee ? fee : defaultFee, memo)
+			} catch (e: any) {
+				throw new Error('TxClient:sendMsgRejectGame: Could not broadcast Tx: '+ e.message)
+			}
+		},
 		
 		async sendMsgCreateGame({ value, fee, memo }: sendMsgCreateGameParams): Promise<DeliverTxResponse> {
 			if (!signer) {
@@ -80,6 +105,14 @@ export const txClient = ({ signer, prefix, addr }: TxClientOptions = { addr: "ht
 			}
 		},
 		
+		
+		msgRejectGame({ value }: msgRejectGameParams): EncodeObject {
+			try {
+				return { typeUrl: "/alice.checkers.checkers.MsgRejectGame", value: MsgRejectGame.fromPartial( value ) }  
+			} catch (e: any) {
+				throw new Error('TxClient:MsgRejectGame: Could not create message: ' + e.message)
+			}
+		},
 		
 		msgCreateGame({ value }: msgCreateGameParams): EncodeObject {
 			try {
