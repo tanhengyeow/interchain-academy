@@ -15,7 +15,7 @@ const (
 )
 
 func TestCreateGame(t *testing.T) {
-	msgServer, context := setupMsgServer(t)
+	msgServer, _, context := setupMsgServerCreateGame(t)
 	createResponse, err := msgServer.CreateGame(context, &types.MsgCreateGame{
 		Creator: alice,
 		Black:   bob,
